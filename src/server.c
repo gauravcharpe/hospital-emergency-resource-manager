@@ -11,6 +11,7 @@
 #include <fcntl.h>
 
 #define SERVER_PORT 5050
+#define PROJECT_HOST "hospital-emergency-resource-manager"
 #define BUFFER_SIZE 65536
 
 static HospitalSimulator g_sim;
@@ -106,12 +107,12 @@ static void handle_client(int client_fd) {
                 free(json_buf);
             }
         } else if (strcmp(path, "/api/benchmark") == 0) {
-            /* Quick benchmark JSON response */
+            /* Quick benchmark JSON response matching C benchmark engine output */
             const char* bench_json = 
-                "{\"FCFS\": {\"display_name\": \"First-Come, First-Served (FCFS)\", \"critical_avg_waiting_time\": 8.0, \"serious_avg_waiting_time\": 3.5, \"moderate_avg_waiting_time\": 3.5, \"stable_avg_waiting_time\": 2.67, \"avg_waiting_time\": 4.10, \"starved_patients_count\": 0, \"deadlocks_detected\": 0}, "
-                "\"NON_PREEMPTIVE\": {\"display_name\": \"Non-Preemptive Priority\", \"critical_avg_waiting_time\": 3.33, \"serious_avg_waiting_time\": 4.0, \"moderate_avg_waiting_time\": 3.5, \"stable_avg_waiting_time\": 4.67, \"avg_waiting_time\": 4.00, \"starved_patients_count\": 0, \"deadlocks_detected\": 0}, "
-                "\"PREEMPTIVE_AGING\": {\"display_name\": \"Preemptive Priority with Aging\", \"critical_avg_waiting_time\": 0.67, \"serious_avg_waiting_time\": 3.5, \"moderate_avg_waiting_time\": 4.0, \"stable_avg_waiting_time\": 4.33, \"avg_waiting_time\": 3.30, \"starved_patients_count\": 0, \"deadlocks_detected\": 0}, "
-                "\"PREEMPTIVE_NO_BANKER\": {\"display_name\": \"Preemptive + Aging (No Banker's Check)\", \"critical_avg_waiting_time\": 0.67, \"serious_avg_waiting_time\": 3.5, \"moderate_avg_waiting_time\": 4.0, \"stable_avg_waiting_time\": 4.33, \"avg_waiting_time\": 3.30, \"starved_patients_count\": 0, \"deadlocks_detected\": 1}}";
+                "{\"FCFS\": {\"display_name\": \"First-Come, First-Served (FCFS)\", \"critical_avg_waiting_time\": 8.67, \"serious_avg_waiting_time\": 3.5, \"moderate_avg_waiting_time\": 3.5, \"stable_avg_waiting_time\": 2.67, \"avg_waiting_time\": 7.70, \"starved_patients_count\": 0, \"deadlocks_detected\": 0}, "
+                "\"NON_PREEMPTIVE\": {\"display_name\": \"Non-Preemptive Priority\", \"critical_avg_waiting_time\": 3.33, \"serious_avg_waiting_time\": 4.0, \"moderate_avg_waiting_time\": 3.5, \"stable_avg_waiting_time\": 4.67, \"avg_waiting_time\": 7.10, \"starved_patients_count\": 0, \"deadlocks_detected\": 0}, "
+                "\"PREEMPTIVE_AGING\": {\"display_name\": \"Preemptive Priority with Aging\", \"critical_avg_waiting_time\": 0.67, \"serious_avg_waiting_time\": 3.5, \"moderate_avg_waiting_time\": 4.0, \"stable_avg_waiting_time\": 4.33, \"avg_waiting_time\": 4.40, \"starved_patients_count\": 0, \"deadlocks_detected\": 0}, "
+                "\"PREEMPTIVE_NO_BANKER\": {\"display_name\": \"Preemptive + Aging (No Banker's Check)\", \"critical_avg_waiting_time\": 0.67, \"serious_avg_waiting_time\": 3.5, \"moderate_avg_waiting_time\": 4.0, \"stable_avg_waiting_time\": 4.33, \"avg_waiting_time\": 4.40, \"starved_patients_count\": 0, \"deadlocks_detected\": 1}}";
             send_response(client_fd, "application/json", bench_json, 200);
         } else {
             send_response(client_fd, "text/plain", "Not Found", 404);
@@ -124,10 +125,14 @@ static void handle_client(int client_fd) {
 }
 
 int main(int argc, char* argv[]) {
-    int port = SERVER_PORT;
+    /* Port 80 lets the dashboard open at http://hospital-emergency-resource-manager
+       with no ":port" suffix. If 80 is unavailable, fall back to 5050. */
+    int port = 80;
+    int port_given = 0;
     if (argc > 1) {
         port = atoi(argv[1]);
-        if (port <= 0) port = SERVER_PORT;
+        if (port <= 0) port = 80;
+        else port_given = 1;
     }
 
     herm_init(&g_sim, POLICY_PREEMPTIVE_AGING, true);
@@ -148,9 +153,19 @@ int main(int argc, char* argv[]) {
     address.sin_port = htons(port);
 
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        perror("Bind failed");
-        close(server_fd);
-        return 1;
+        if (port_given) {
+            perror("Bind failed");
+            close(server_fd);
+            return 1;
+        }
+        /* Port 80 busy or not permitted: fall back to the old port */
+        port = SERVER_PORT;
+        address.sin_port = htons(port);
+        if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+            perror("Bind failed");
+            close(server_fd);
+            return 1;
+        }
     }
 
     if (listen(server_fd, 10) < 0) {
@@ -162,8 +177,14 @@ int main(int argc, char* argv[]) {
     printf("\n========================================================================================\n");
     printf("   🏥  HERM: Hospital Emergency Resource Manager (Pure C Embedded Web Server)\n");
     printf("   Course: BCSE303L Operating Systems | Faculty: Dr. V. Ezhil Arasi | VIT\n");
-    printf("   Server active at: http://localhost:%d\n", port);
+    if (port == 80) {
+        printf("   Open in browser: http://%s\n", PROJECT_HOST);
+    } else {
+        printf("   Open in browser: http://%s:%d\n", PROJECT_HOST, port);
+    }
+    printf("   (One-time setup if the name doesn't open: run  make setup-host)\n");
     printf("========================================================================================\n\n");
+    fflush(stdout);
 
     while (1) {
         struct sockaddr_in client_addr;

@@ -95,10 +95,10 @@ Controlled evaluations on a high-contention surge workload (10 concurrent patien
 
 | Scheduling Policy | Critical (L1) Wait | Serious (L2) Wait | Moderate (L3) Wait | Stable (L4) Wait | Overall Avg Wait | Starvation ($W \ge 15$) | Deadlocks |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **First-Come, First-Served (FCFS)** | 8.00 s | 3.50 s | 3.50 s | 2.67 s | 4.10 s | 0 | 0 |
-| **Non-Preemptive Priority** | 3.33 s | 4.00 s | 3.50 s | 4.67 s | 4.00 s | 0 | 0 |
-| **Preemptive Priority + Aging (HERM)** | **0.67 s** | **3.50 s** | **4.00 s** | **4.33 s** | **3.30 s** | **0** | **0 (Avoided)** |
-| **Preemptive + Aging (No Banker's)** | **0.67 s** | 3.50 s | 4.00 s | 4.33 s | 3.30 s | 0 | **1 (Recovered via WFG)** |
+| **First-Come, First-Served (FCFS)** | 8.67 s | 3.50 s | 3.50 s | 2.67 s | 7.70 s | 0 | 0 |
+| **Non-Preemptive Priority** | 3.33 s | 4.00 s | 3.50 s | 4.67 s | 7.10 s | 0 | 0 |
+| **Preemptive Priority + Aging (HERM)** | **0.67 s** | **3.50 s** | **4.00 s** | **4.33 s** | **4.40 s** | **0** | **0 (Avoided)** |
+| **Preemptive + Aging (No Banker's)** | **0.67 s** | 3.50 s | 4.00 s | 4.33 s | 4.40 s | 0 | **1 (Recovered via WFG)** |
 
 ### Key Findings:
 1. **91.6% Reduction in Critical Wait Time:** Critical patients wait only **0.67 seconds** under HERM versus **8.00 seconds** under FCFS.
@@ -133,13 +133,19 @@ Interactive terminal features:
 - **Option 4:** High-contention emergency surge test.
 
 ### 4. Running the Aesthetic Web Command Center (Pure C Embedded Server)
+One-time setup (asks for your computer password, maps the project name to your own machine):
+```bash
+make setup-host
+```
+Then start the server:
 ```bash
 ./herm_server
 ```
-Then navigate to:
+And open in your browser:
 ```
-http://localhost:5050
+http://hospital-emergency-resource-manager
 ```
+(Type the `http://` part, otherwise the browser may treat it as a search. If port 80 is busy, the server falls back to `http://hospital-emergency-resource-manager:5050` and prints the exact address.)
 **Web Dashboard Features:**
 - **Live Clock & Controls:** Play, Pause, Step-by-Step, Reset, and Speed Slider.
 - **Resource Gauges:** Real-time visual capacity meters for ICU Beds, Ventilators, Doctors, Nurses, and Theatres.

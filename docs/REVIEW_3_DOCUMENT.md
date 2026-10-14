@@ -132,12 +132,12 @@ To evaluate the system, identical high-contention surge workloads comprising 10 
 ### Table I: Comparative Benchmark Performance (Surge Workload)
 | Metric | FCFS | Non-Preemptive Priority | Preemptive Priority with Aging (Proposed) | Preemptive + Aging (No Banker's) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Critical (Level 1) Avg Wait Time** | **8.00 s** | **3.33 s** | **0.67 s** | **0.67 s** |
-| **Critical (Level 1) Avg Turnaround** | 13.00 s | 8.33 s | 5.67 s | 5.67 s |
+| **Critical (Level 1) Avg Wait Time** | **8.67 s** | **3.33 s** | **0.67 s** | **0.67 s** |
+| **Critical (Level 1) Avg Turnaround** | 14.90 s | 14.30 s | 11.60 s | 11.60 s |
 | **Serious (Level 2) Avg Wait Time** | 3.50 s | 4.00 s | 3.50 s | 3.50 s |
 | **Moderate (Level 3) Avg Wait Time** | 3.50 s | 3.50 s | 4.00 s | 4.00 s |
 | **Stable (Level 4) Avg Wait Time** | 2.67 s | 4.67 s | 4.33 s | 4.33 s |
-| **Overall System Avg Wait Time** | 4.10 s | 4.00 s | **3.30 s** | **3.30 s** |
+| **Overall System Avg Wait Time** | 7.70 s | 7.10 s | **4.40 s** | **4.40 s** |
 | **Starved Patients Count ($W \ge 15$)** | 0 | 0 | **0** | 0 |
 | **Deadlocks Detected** | 0 | 0 | **0 (Avoided)** | **1 (Recovered via WFG)** |
 | **Deadlocks Recovered** | 0 | 0 | 0 | 1 |
@@ -145,9 +145,9 @@ To evaluate the system, identical high-contention surge workloads comprising 10 
 ```
 CRITICAL PATIENT WAITING TIME COMPARISON (Lower is Better)
 ┌─────────────────────────────────────────────────────────────┐
-│ FCFS:                    ████████████████████████ 8.00 s    │
+│ FCFS:                    ████████████████████████ 8.67 s    │
 │ Non-Preemptive Priority: ██████████ 3.33 s                  │
-│ HERM Preemptive + Aging: ██ 0.67 s  [91.6% REDUCTION!]      │
+│ HERM Preemptive + Aging: ██ 0.67 s  [92.3% REDUCTION!]      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -219,6 +219,6 @@ make
 # 3. Run Comparative Benchmark Suite:
 ./herm_cli --benchmark
 
-# 4. Launch Pure C Web Server (opens http://localhost:5050):
+# 4. Launch Pure C Web Server (run `make setup-host` once, then open http://hospital-emergency-resource-manager):
 ./herm_server
 ```

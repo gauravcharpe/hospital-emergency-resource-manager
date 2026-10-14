@@ -26,4 +26,11 @@ server: herm_server
 benchmark: herm_cli
 	./herm_cli --benchmark
 
-.PHONY: all clean run server benchmark
+# One-time: lets the browser open http://hospital-emergency-resource-manager
+# by pointing that name at this computer (127.0.0.1). Asks for your Mac password.
+setup-host:
+	@grep -q "hospital-emergency-resource-manager" /etc/hosts && echo "Already set up." || \
+	(echo "127.0.0.1 hospital-emergency-resource-manager" | sudo tee -a /etc/hosts >/dev/null && \
+	 sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder 2>/dev/null; echo "Done. Now run ./herm_server")
+
+.PHONY: all clean run server benchmark setup-host

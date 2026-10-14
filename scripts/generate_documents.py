@@ -254,11 +254,11 @@ def generate_review_3_pdf():
             "table": {
                 "data": [
                     ["Metric", "FCFS", "Non-Preemptive", "Preemptive + Aging (HERM)", "No Banker's"],
-                    ["Critical (L1) Avg Wait", "8.00 s", "3.33 s", "0.67 s", "0.67 s"],
+                    ["Critical (L1) Avg Wait", "8.67 s", "3.33 s", "0.67 s", "0.67 s"],
                     ["Serious (L2) Avg Wait", "3.50 s", "4.00 s", "3.50 s", "3.50 s"],
                     ["Moderate (L3) Avg Wait", "3.50 s", "3.50 s", "4.00 s", "4.00 s"],
                     ["Stable (L4) Avg Wait", "2.67 s", "4.67 s", "4.33 s", "4.33 s"],
-                    ["Overall Avg Wait Time", "4.10 s", "4.00 s", "3.30 s", "3.30 s"],
+                    ["Overall Avg Wait Time", "7.70 s", "7.10 s", "4.40 s", "4.40 s"],
                     ["Starvation Count (W>=15)", "0", "0", "0", "0"],
                     ["Deadlocks Detected", "0", "0", "0 (Avoided)", "1 (Recovered)"]
                 ],
