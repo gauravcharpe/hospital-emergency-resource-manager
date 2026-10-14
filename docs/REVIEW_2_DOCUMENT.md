@@ -139,31 +139,31 @@ When Banker's avoidance is intentionally bypassed (or in environments where maxi
 ## 4. Technology Stack & Configuration
 | Component | Technology / Library | Architectural Role |
 | :--- | :--- | :--- |
-| **Language** | Python 3.13 | High-precision concurrency, standard library primitives |
-| **Synchronization** | `threading`, `Lock`, `Condition` | Counting semaphores, allocation mutex, thread safety |
-| **Database** | SQLite 3 (`sqlite3`) | Persistent audit trails, event telemetry, deadlock logging |
-| **Data Structures** | `numpy`, `queue`, `collections` | Fast matrix manipulation, FIFO and priority queues |
-| **Web Server** | `http.server`, `socketserver` | High-performance zero-dependency RESTful HTTP API |
-| **Web Dashboard** | HTML5, CSS3 Variables, ES6 JS | Glassmorphic dark-mode emergency room command center |
+| **Primary Language** | C (C11 Standard) | High-performance low-level system programming and memory management |
+| **Concurrency & Synchronization** | POSIX Threads (`pthread`), `pthread_mutex_t`, `pthread_cond_t` | Custom counting semaphores, atomic allocation critical sections |
+| **Compiler & Toolchain** | Apple Clang / GCC, GNU Make (`Makefile`) | Native optimization (`-O2`), strict compiler warnings (`-Wall -Wextra`) |
+| **Networking & API** | BSD Sockets (`sys/socket.h`, `netinet/in.h`) | Embedded pure C HTTP REST server delivering real-time telemetry |
+| **Data Structures** | Custom C Structs, Adjacency Matrices | Fast memory-efficient Banker vectors, WFG matrices, and PCB records |
+| **Aesthetic Dashboard** | HTML5, CSS3 Variables, ES6 JS | Glassmorphic dark-mode emergency room command center |
 | **Visualizations** | SVG Vector Canvas | Interactive dynamic Wait-For Graph and cycle visualizer |
-| **Desktop GUI** | Python Tkinter (`tkinter.ttk`) | Native local graphical window fallback |
-| **CLI Dashboard** | Python Shell Utility | Terminal-based step-by-step runner and benchmark suite |
+| **Terminal CLI** | C Terminal Interface (`stdio.h`, ANSI escapes) | Colorized interactive step-by-step runner and benchmark suite |
 
 ---
 
-## 5. Module-Wise Implementation Breakdown
-The codebase is structured into clear, decoupled modules under `herm/`:
-1. `herm/core/models.py`: Defines `Patient`, `PriorityLevel`, `ProcessState`, and resource vector schemas.
-2. `herm/core/synchronization.py`: Implements `CountingSemaphore` and `SynchronizationManager` with `allocation_mutex`.
-3. `herm/core/banker.py`: Encapsulates Banker's safety evaluation and resource-request testing.
-4. `herm/core/deadlock_detector.py`: Implements Wait-For Graph construction, DFS cycle search, and preemption recovery.
-5. `herm/core/scheduler.py`: Houses the multi-policy scheduler (Preemptive Priority with Aging, Non-Preemptive, FCFS).
-6. `herm/core/ipc_bus.py`: Event bus managing discrete message passing (`ARRIVAL`, `GRANT`, `DENY`, `PREEMPT`, `DONE`).
-7. `herm/core/database.py`: Schema definitions and queries for simulation runs, patient telemetry, and deadlock audit logs.
-8. `herm/core/simulator.py`: Central simulation engine executing discrete clock progression and state coordination.
-9. `herm/core/benchmark.py`: Automated batch evaluator testing identical workloads across all algorithms.
-10. `app.py`: Web server exposing REST API endpoints on port 5050.
-11. `gui.py` & `cli.py`: Native Tkinter desktop GUI and terminal dashboard.
+## 5. Module-Wise Implementation Breakdown (C Codebase)
+The C codebase is organized into clean, modular files:
+1. `include/herm.h`: Master header defining constants, `Patient` PCB struct, `CountingSemaphore`, `BankerState`, `WaitForGraph`, `IPCMessage`, and `HospitalSimulator` state.
+2. `src/models.c`: Workload definitions (Standard Table IV and Surge), string helper utilities, and PCB initialization.
+3. `src/sync.c`: POSIX Counting Semaphore (`sem_custom_init`, `sem_custom_acquire`, `sem_custom_release`, `sem_custom_reset`) and allocation mutex management.
+4. `src/banker.c`: Dijkstra’s Banker’s Algorithm in C (safety algorithm with `work` and `finish` arrays; `banker_evaluate_request` test grants).
+5. `src/deadlock.c`: Wait-For Graph matrix formulation, DFS cycle traversal, deterministic victim selection, and preemption recovery.
+6. `src/scheduler.c`: Preemptive Priority Scheduler with dynamic aging ($T_a = 4$, cap = 2), Non-Preemptive, and FCFS policies.
+7. `src/ipc.c`: Thread-safe Inter-Process Communication ring-buffer message bus.
+8. `src/simulator.c`: Central simulation coordinator executing discrete clock ticks, preemption triggers, and state dispatching.
+9. `src/benchmark.c`: Automated batch evaluator testing identical workloads across all algorithms and exporting state to JSON.
+10. `src/main.c`: Interactive ANSI terminal dashboard and CLI simulation tool.
+11. `src/server.c`: Pure C embedded HTTP socket server serving the web command center on port 5050.
+12. `Makefile`: Build configuration compiling `herm_cli` and `herm_server`.
 
 ---
 

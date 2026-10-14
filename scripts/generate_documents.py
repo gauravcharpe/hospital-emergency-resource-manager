@@ -205,15 +205,16 @@ def generate_review_2_pdf():
             ]
         },
         {
-            "heading": "3. Technology Stack & Software Architecture",
+            "heading": "3. Technology Stack & Software Architecture (C Implementation)",
             "table": {
                 "data": [
                     ["Layer", "Technology", "Description"],
-                    ["Core Engine", "Python 3.13 (threading, queue, lock)", "Simulates concurrent patient processes and synchronization"],
-                    ["Synchronization", "Counting Semaphore & Mutex", "Protects 5 resource pools and guarantees atomic allocation"],
-                    ["Persistence", "SQLite 3", "Audits simulation runs, patient telemetry, and deadlock logs"],
-                    ["Web Server", "Python http.server (Port 5050)", "Zero-dependency RESTful HTTP API and static file server"],
-                    ["Dashboard UI", "HTML5, CSS3, ES6 JavaScript", "Aesthetic dark-mode clinical command center with live Kanban"],
+                    ["Core Engine", "C Language (C11 Standard)", "Low-level system programming, memory-efficient process execution"],
+                    ["Concurrency", "POSIX Threads (pthreads)", "Multi-threaded synchronization using pthread_mutex_t and pthread_cond_t"],
+                    ["Synchronization", "Counting Semaphores & Mutex", "Guards 5 resource pools and guarantees atomic allocation critical sections"],
+                    ["Build System", "GNU Make (Makefile)", "Compiles herm_cli and herm_server with clang -Wall -Wextra -O2 -pthread"],
+                    ["Networking", "BSD Sockets (sys/socket.h)", "Pure C embedded HTTP server serving REST API on port 5050"],
+                    ["Command Center", "HTML5, CSS3, ES6 JavaScript", "Aesthetic dark-mode clinical command center with live Kanban"],
                     ["Visual Graph", "SVG Vector Canvas", "Interactive Wait-For Graph with dynamic node layout and cycle arrows"]
                 ],
                 "colWidths": [100, 160, 260]
@@ -274,9 +275,10 @@ def generate_review_3_pdf():
         {
             "heading": "GitHub Repository & Verification",
             "content": [
-                "The complete implementation with git version history is prepared for review submission:",
+                "The complete implementation in C with POSIX threads is prepared for review submission:",
                 "Repository URL: https://github.com/nitinholkar/hospital-emergency-resource-manager",
-                "Execution Command: python3 app.py (Web Dashboard) | python3 gui.py (Desktop GUI) | python3 cli.py (Terminal Runner)"
+                "Compilation: make (compiles herm_cli and herm_server)",
+                "Execution: ./herm_cli (Terminal CLI) | ./herm_server (Pure C Web Server) | ./herm_cli --benchmark"
             ]
         }
     ]

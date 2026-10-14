@@ -195,7 +195,7 @@ Future extensions include integrating continuous Markovian arrival processes, mo
 ---
 
 ## VIII. GitHub Repository Setup & Execution Guide
-The complete source code has been structured, initialized, and committed to git with a full multi-stage version history.
+The complete source code is written natively in C (C11 with POSIX Threads), structured with GNU Make, and committed to git with a full multi-stage version history.
 
 ### To push this repository to your GitHub account:
 ```bash
@@ -208,14 +208,17 @@ git branch -M main
 git push -u origin main
 ```
 
-### To run the project locally:
+### To compile and run the project locally in C:
 ```bash
-# Launch Aesthetic Web Command Center (opens in browser):
-python3 app.py
+# 1. Compile all C binaries:
+make
 
-# Launch Native Desktop GUI (Tkinter):
-python3 gui.py
+# 2. Launch Interactive C Terminal Dashboard:
+./herm_cli
 
-# Run CLI Simulation & Interactive Benchmarks:
-python3 cli.py
+# 3. Run Comparative Benchmark Suite:
+./herm_cli --benchmark
+
+# 4. Launch Pure C Web Server (opens http://localhost:5050):
+./herm_server
 ```

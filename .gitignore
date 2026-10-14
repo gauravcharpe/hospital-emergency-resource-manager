@@ -1,3 +1,9 @@
+# C compilation artifacts
+*.o
+herm_cli
+herm_server
+herm
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

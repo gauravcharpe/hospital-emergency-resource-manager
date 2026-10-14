@@ -107,72 +107,78 @@ Controlled evaluations on a high-contention surge workload (10 concurrent patien
 
 ---
 
-## 🚀 Quickstart & Execution Guide
+## 🚀 Quickstart & C Compilation Guide
 
 ### 1. Prerequisites
-- Python 3.10+ (Standard library only; **zero external dependencies required**).
+- Standard C Compiler: `clang` or `gcc` with POSIX Threads (`-pthread`).
+- `make` utility.
 
-### 2. Launching the Aesthetic Web Command Center (Recommended)
+### 2. Compiling the Project
+Compile all C binaries with a single command:
 ```bash
-python3 app.py
+make
 ```
-Open your browser and navigate to:
+This builds two executables:
+- `herm_cli`: The interactive ANSI terminal command center and benchmark engine.
+- `herm_server`: The pure C embedded HTTP web server that delivers the aesthetic web command center.
+
+### 3. Running the Interactive C Terminal Dashboard
+```bash
+./herm_cli
+```
+Interactive terminal features:
+- **Option 1:** Step-by-step clock simulation with live colorized patient queue tables, resource capacity bars, and IPC event notifications.
+- **Option 2:** Full Comparative Benchmark Study comparing FCFS, Non-Preemptive, and Preemptive Priority with Aging.
+- **Option 3:** Deadlock injection and Wait-For Graph (WFG) preemption recovery demo.
+- **Option 4:** High-contention emergency surge test.
+
+### 4. Running the Aesthetic Web Command Center (Pure C Embedded Server)
+```bash
+./herm_server
+```
+Then navigate to:
 ```
 http://localhost:5050
 ```
-**Interactive Dashboard Features:**
+**Web Dashboard Features:**
 - **Live Clock & Controls:** Play, Pause, Step-by-Step, Reset, and Speed Slider.
 - **Resource Gauges:** Real-time visual capacity meters for ICU Beds, Ventilators, Doctors, Nurses, and Theatres.
 - **Triage Kanban:** Process state board showing `READY`, `RUNNING`, `WAITING`, and `COMPLETED` queues.
-- **Interactive Wait-For Graph (SVG):** Dynamic directed dependency graph highlighting circular wait cycles with animated red pulses.
+- **Interactive Wait-For Graph (SVG Canvas):** Directed patient dependency graph highlighting circular wait cycles with animated red pulses.
 - **Banker's Matrix Inspector:** Live $Available$, $Max$, $Alloc$, and $Need$ tables with real-time safe execution sequences.
 - **Interactive Buttons:**
   - `⚠️ Inject Deadlock`: Deliberately provokes a circular wait to demonstrate runtime WFG detection and preemption recovery.
   - `+ Register Patient`: Custom form to admit a new emergency patient on the fly.
   - `📊 Benchmark Study`: Instant one-click comparative benchmark report across all 4 policies.
 
-### 3. Native Desktop GUI (Tkinter)
-If you prefer running a local desktop application without a web browser:
+### 5. Running the Automated Comparative Benchmarks
 ```bash
-python3 gui.py
+make benchmark
+# OR: ./herm_cli --benchmark
 ```
-
-### 4. Interactive Terminal CLI
-```bash
-python3 cli.py
-```
-
-### 5. Regenerating Academic Review PDFs
-```bash
-python3 scripts/generate_documents.py
-```
-Outputs formatted PDF reports in the `docs/` folder:
-- `docs/HERM_Review_1_Problem_and_Literature.pdf`
-- `docs/HERM_Review_2_Methodology_and_Implementation.pdf`
-- `docs/HERM_Review_3_Final_Manuscript_and_Evaluation.pdf`
 
 ---
 
 ## 🛠️ Project Structure
 ```
 Hospital Emergency Resource Manager/
+├── Makefile                       # Clean compilation with clang -pthread -O2
 ├── README.md                      # Comprehensive project documentation
-├── app.py                         # Web Server & RESTful API entry point (Port 5050)
-├── gui.py                         # Native Tkinter Desktop Dashboard
-├── cli.py                         # Interactive Terminal CLI Runner & Benchmarks
-├── herm/
-│   ├── core/
-│   │   ├── models.py              # Patient, PriorityLevel, ProcessState, Resource models
-│   │   ├── synchronization.py     # Counting Semaphores & Allocation Mutex
-│   │   ├── banker.py              # Dijkstra's Banker's Algorithm (Avoidance)
-│   │   ├── deadlock_detector.py   # Wait-For Graph (WFG) & DFS Cycle Recovery
-│   │   ├── scheduler.py           # Preemptive Priority with Aging, Non-Preemptive, FCFS
-│   │   ├── ipc_bus.py             # Discrete Event Message Passing Bus
-│   │   ├── database.py            # SQLite Audit Trails & Telemetry
-│   │   ├── simulator.py           # Central Simulation Engine & Workloads
-│   │   └── benchmark.py           # Multi-Algorithm Batch Evaluation Runner
-│   └── web/
-│       └── index.html             # Aesthetic Glassmorphic Clinical Command Center UI
+├── include/
+│   └── herm.h                     # Master C header (PCB, Semaphores, Mutex, WFG, Banker)
+├── src/
+│   ├── main.c                     # Interactive ANSI Terminal CLI & entry point
+│   ├── server.c                   # Pure C Embedded HTTP Web Server & REST API
+│   ├── models.c                   # Workload definitions (Standard & Surge) and helpers
+│   ├── sync.c                     # POSIX Counting Semaphores & Allocation Mutex
+│   ├── banker.c                   # Dijkstra's Banker's Algorithm (Avoidance)
+│   ├── deadlock.c                 # Wait-For Graph (WFG) & DFS Cycle Recovery
+│   ├── scheduler.c                # Preemptive Priority with Aging, Non-Preemptive, FCFS
+│   ├── ipc.c                      # Thread-Safe Discrete Event Message Passing Bus
+│   ├── simulator.c                # Central Discrete Simulation Coordinator
+│   └── benchmark.c                # Multi-Algorithm Batch Evaluation Runner & JSON Export
+├── web/
+│   └── index.html                 # Aesthetic Glassmorphic Clinical Command Center UI
 ├── docs/
 │   ├── REVIEW_1_DOCUMENT.md       # Review 1: Problem, Literature (16 citations), Gap, Architecture
 │   ├── REVIEW_2_DOCUMENT.md       # Review 2: Methodology, State Machine, Algorithms, Tech Stack
@@ -180,10 +186,8 @@ Hospital Emergency Resource Manager/
 │   ├── HERM_Review_1_Problem_and_Literature.pdf
 │   ├── HERM_Review_2_Methodology_and_Implementation.pdf
 │   └── HERM_Review_3_Final_Manuscript_and_Evaluation.pdf
-├── scripts/
-│   └── generate_documents.py      # Automated PDF Report Generator
-└── data/
-    └── herm_simulation.db         # Persistent SQLite Audit Database
+└── scripts/
+    └── generate_documents.py      # Academic Review PDF Generator
 ```
 
 ---
