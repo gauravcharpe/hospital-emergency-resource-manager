@@ -14,7 +14,7 @@
 *School of Computer Science and Engineering, Vellore Institute of Technology, Vellore, India*  
 *Course: Operating Systems (BCSE303L) | Faculty: Dr. V. Ezhil Arasi*  
 
-**GitHub Repository:** `https://github.com/nitinholkar/hospital-emergency-resource-manager`  
+**GitHub Repository:** `https://github.com/gauravcharpe/hospital-emergency-resource-manager`  
 *(Refer to Section VIII for Git verification and execution commands)*
 
 ---

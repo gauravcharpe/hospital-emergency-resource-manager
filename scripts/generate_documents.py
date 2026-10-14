@@ -277,7 +277,7 @@ def generate_review_3_pdf():
             "heading": "GitHub Repository & Verification",
             "content": [
                 "The complete implementation in C with POSIX threads is prepared for review submission:",
-                "Repository URL: https://github.com/nitinholkar/hospital-emergency-resource-manager",
+                "Repository URL: https://github.com/gauravcharpe/hospital-emergency-resource-manager",
                 "Compilation: make (compiles herm_cli and herm_server)",
                 "Execution: ./herm_cli (Terminal CLI) | ./herm_server (Pure C Web Server) | ./herm_cli --benchmark"
             ]
