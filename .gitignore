@@ -37,3 +37,4 @@ env/
 
 # SQLite local data (optional, keep schema clean)
 *.sqlite3-journal
+*.db
