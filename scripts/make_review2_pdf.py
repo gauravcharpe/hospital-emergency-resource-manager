@@ -14,6 +14,7 @@ from reportlab.platypus import (
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS_DIR = os.path.join(ROOT_DIR, "docs")
+DOWNLOADS_DIR = "/Users/gauravcharpe/Downloads"
 os.makedirs(DOCS_DIR, exist_ok=True)
 
 # 1. Generate Terminal Screenshot Images using Pillow
@@ -169,7 +170,7 @@ def build_review2_pdf(output_pdf_path):
     # Project Information Table
     info_data = [
         [Paragraph("<b>Project Title:</b>", body_style), Paragraph("Hospital Emergency Resource Manager (HERM) Using Operating System Concepts", body_style)],
-        [Paragraph("<b>Team Members:</b>", body_style), Paragraph("1. <b>Gaurav Charpe</b> (Reg. No: 24BCT0326)<br/>2. <b>Nitin Sunil Holkar</b> (Reg. No: 24BCE2819)<br/>3. <b>Aditya Phogaat</b>", body_style)],
+        [Paragraph("<b>Team Members:</b>", body_style), Paragraph("1. <b>Gaurav Charpe</b> (Reg. No: 24BCT0326)<br/>2. <b>Nitin Sunil Holkar</b> (Reg. No: 24BCE2819)<br/>3. <b>Aditya Phogaat</b> (Reg. No: 24BDS0349)", body_style)],
         [Paragraph("<b>GitHub Repository:</b>", body_style), Paragraph("<b><u>https://github.com/gauravcharpe/hospital-emergency-resource-manager</u></b> (Public, Full C Codebase)", body_style)],
         [Paragraph("<b>Programming Language:</b>", body_style), Paragraph("C (C11 Standard) with POSIX Threads (<font name='Courier'>pthreads</font>), Semaphores & Mutexes", body_style)],
         [Paragraph("<b>Review Submission:</b>", body_style), Paragraph("Review 2: Complete Implementation Details, Tech Stack, Algorithms, and Output Evidence", body_style)]
@@ -323,3 +324,11 @@ def build_review2_pdf(output_pdf_path):
 if __name__ == "__main__":
     local_pdf = os.path.join(DOCS_DIR, "HERM_Review_2_Implementation_Document.pdf")
     build_review2_pdf(local_pdf)
+    
+    dl_pdf = os.path.join(DOWNLOADS_DIR, "HERM_Review_2_Implementation_Document.pdf")
+    try:
+        import shutil
+        shutil.copyfile(local_pdf, dl_pdf)
+        print(f"Successfully copied Review 2 PDF to Downloads: {dl_pdf}")
+    except Exception as e:
+        print(f"Error copying to Downloads: {e}")

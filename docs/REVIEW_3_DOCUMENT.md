@@ -10,7 +10,7 @@
 
 **Nitin Sunil Holkar** (24BCE2819)  
 **Gaurav Charpe** (24BCT0326)  
-**Aditya Phogaat** (24BCE/BCT)  
+**Aditya Phogaat** (24BDS0349)  
 *School of Computer Science and Engineering, Vellore Institute of Technology, Vellore, India*  
 *Course: Operating Systems (BCSE303L) | Faculty: Dr. V. Ezhil Arasi*  
 

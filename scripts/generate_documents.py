@@ -121,7 +121,7 @@ def build_pdf(filename, title, subtitle, sections):
 
 def generate_review_1_pdf():
     title = "Review 1: Hospital Emergency Resource Manager (HERM)"
-    subtitle = "Course: BCSE303L Operating Systems | Faculty: Dr. V. Ezhil Arasi<br/>Team: Nitin Sunil Holkar (24BCE2819), Gaurav Charpe (24BCT0326), Aditya Phogaat<br/>School of Computer Science and Engineering, Vellore Institute of Technology, Vellore"
+    subtitle = "Course: BCSE303L Operating Systems | Faculty: Dr. V. Ezhil Arasi<br/>Team: Nitin Sunil Holkar (24BCE2819), Gaurav Charpe (24BCT0326), Aditya Phogaat (24BDS0349)<br/>School of Computer Science and Engineering, Vellore Institute of Technology, Vellore"
     sections = [
         {
             "heading": "1. Problem Statement & Motivation",
@@ -186,7 +186,7 @@ def generate_review_1_pdf():
 
 def generate_review_2_pdf():
     title = "Review 2: Methodology & Implementation Details"
-    subtitle = "Course: BCSE303L Operating Systems | Faculty: Dr. V. Ezhil Arasi<br/>Team: Nitin Sunil Holkar (24BCE2819), Gaurav Charpe (24BCT0326), Aditya Phogaat<br/>School of Computer Science and Engineering, Vellore Institute of Technology, Vellore"
+    subtitle = "Course: BCSE303L Operating Systems | Faculty: Dr. V. Ezhil Arasi<br/>Team: Nitin Sunil Holkar (24BCE2819), Gaurav Charpe (24BCT0326), Aditya Phogaat (24BDS0349)<br/>School of Computer Science and Engineering, Vellore Institute of Technology, Vellore"
 
     sections = [
         {
@@ -241,7 +241,7 @@ def generate_review_2_pdf():
 
 def generate_review_3_pdf():
     title = "Review 3: Final Manuscript & Experimental Evaluation"
-    subtitle = "Hospital Emergency Resource Manager Using Operating System Concepts<br/>Nitin Sunil Holkar (24BCE2819), Gaurav Charpe (24BCT0326), Aditya Phogaat | Faculty: Dr. V. Ezhil Arasi<br/>School of Computer Science and Engineering, Vellore Institute of Technology, Vellore"
+    subtitle = "Hospital Emergency Resource Manager Using Operating System Concepts<br/>Nitin Sunil Holkar (24BCE2819), Gaurav Charpe (24BCT0326), Aditya Phogaat (24BDS0349) | Faculty: Dr. V. Ezhil Arasi<br/>School of Computer Science and Engineering, Vellore Institute of Technology, Vellore"
     sections = [
         {
             "heading": "Abstract & Summary",
