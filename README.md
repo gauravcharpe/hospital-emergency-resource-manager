@@ -8,8 +8,8 @@
 
 ## 👥 Project Team (Group of 3)
 1. **Nitin Sunil Holkar** (Registration No: `24BCE2819`)
-2. **Team Member 2** (Registration No: `24BCEXXXX`)
-3. **Team Member 3** (Registration No: `24BCEYYYY`)
+2. **Gaurav Charpe** (Registration No: `24BCT0326`)
+3. **Aditya Phogaat** (Registration No: `24BCE/BCT`)
 
 ---
 

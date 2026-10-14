@@ -11,8 +11,8 @@
 
 ### Team Members
 1. **Nitin Sunil Holkar** (Reg. No: 24BCE2819)
-2. **Team Member 2** (Reg. No: 24BCEXXXX)
-3. **Team Member 3** (Reg. No: 24BCEYYYY)
+2. **Gaurav Charpe** (Reg. No: 24BCT0326)
+3. **Aditya Phogaat** (Reg. No: 24BCE/BCT)
 
 ---
 

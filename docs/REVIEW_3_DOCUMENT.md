@@ -9,8 +9,8 @@
 # Hospital Emergency Resource Manager Using Operating System Concepts
 
 **Nitin Sunil Holkar** (24BCE2819)  
-**Team Member 2** (24BCEXXXX)  
-**Team Member 3** (24BCEYYYY)  
+**Gaurav Charpe** (24BCT0326)  
+**Aditya Phogaat** (24BCE/BCT)  
 *School of Computer Science and Engineering, Vellore Institute of Technology, Vellore, India*  
 *Course: Operating Systems (BCSE303L) | Faculty: Dr. V. Ezhil Arasi*  
 
