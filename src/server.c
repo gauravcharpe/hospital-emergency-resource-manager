@@ -125,14 +125,10 @@ static void handle_client(int client_fd) {
 }
 
 int main(int argc, char* argv[]) {
-    /* Port 80 lets the dashboard open at http://hospital-emergency-resource-manager
-       with no ":port" suffix. If 80 is unavailable, fall back to 5050. */
-    int port = 80;
-    int port_given = 0;
+    int port = SERVER_PORT;
     if (argc > 1) {
         port = atoi(argv[1]);
-        if (port <= 0) port = 80;
-        else port_given = 1;
+        if (port <= 0) port = SERVER_PORT;
     }
 
     herm_init(&g_sim, POLICY_PREEMPTIVE_AGING, true);
@@ -153,19 +149,9 @@ int main(int argc, char* argv[]) {
     address.sin_port = htons(port);
 
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        if (port_given) {
-            perror("Bind failed");
-            close(server_fd);
-            return 1;
-        }
-        /* Port 80 busy or not permitted: fall back to the old port */
-        port = SERVER_PORT;
-        address.sin_port = htons(port);
-        if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-            perror("Bind failed");
-            close(server_fd);
-            return 1;
-        }
+        perror("Bind failed");
+        close(server_fd);
+        return 1;
     }
 
     if (listen(server_fd, 10) < 0) {
@@ -177,12 +163,7 @@ int main(int argc, char* argv[]) {
     printf("\n========================================================================================\n");
     printf("   🏥  HERM: Hospital Emergency Resource Manager (Pure C Embedded Web Server)\n");
     printf("   Course: BCSE303L Operating Systems | Faculty: Dr. V. Ezhil Arasi | VIT\n");
-    if (port == 80) {
-        printf("   Open in browser: http://%s\n", PROJECT_HOST);
-    } else {
-        printf("   Open in browser: http://%s:%d\n", PROJECT_HOST, port);
-    }
-    printf("   (One-time setup if the name doesn't open: run  make setup-host)\n");
+    printf("   Open in Safari / Chrome: http://localhost:%d   (or http://127.0.0.1:%d)\n", port, port);
     printf("========================================================================================\n\n");
     fflush(stdout);
 
