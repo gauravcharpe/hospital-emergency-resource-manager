@@ -44,3 +44,7 @@ env/
 # SQLite local data (optional, keep schema clean)
 *.sqlite3-journal
 *.db
+scripts/make_presentation_script_pdf.py
+scripts/make_viva_guide_pdf.py
+docs/*Script*.pdf
+docs/*Guide*.pdf
