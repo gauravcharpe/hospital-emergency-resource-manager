@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #define SERVER_PORT 5050
 #define PROJECT_HOST "hospital-emergency-resource-manager"
@@ -131,6 +132,7 @@ int main(int argc, char* argv[]) {
         if (port <= 0) port = SERVER_PORT;
     }
 
+    signal(SIGPIPE, SIG_IGN);
     herm_init(&g_sim, POLICY_PREEMPTIVE_AGING, true);
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
