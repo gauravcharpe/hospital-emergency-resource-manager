@@ -267,25 +267,37 @@ static void handle_client(int client_fd) {
                 send_response(client_fd, "application/json", json_buf, 200);
                 free(json_buf);
             }
-        } else if (strcmp(path, "/api/load_three") == 0) {
+        } else if (strcmp(path, "/api/load_count") == 0 || strcmp(path, "/api/load_three") == 0) {
+            int req_count = json_get_int(body, "count", 3);
+            if (req_count < 1) req_count = 1;
+            if (req_count > MAX_PATIENTS) req_count = MAX_PATIENTS;
+
+            herm_load_surge_workload(&g_sim);
             herm_reset(&g_sim);
-            g_sim.patient_count = 0;
-            g_sim.clock = 0;
-            g_sim.is_completed = 0;
-            g_sim.message_count = 0;
 
-            Patient p1 = { "P1", "John Doe", "Controlled bleeding (Moderate)", 0, PRIO_MODERATE, PRIO_MODERATE, 6, 6, STATE_READY, {1, 0, 1, 1, 0}, {0,0,0,0,0}, {1, 0, 1, 1, 0}, 0, 0, 0, 0, 0, 0, 0, 0 };
-            Patient p2 = { "P2", "Sarah Smith", "Acute respiratory distress (Serious)", 0, PRIO_SERIOUS, PRIO_SERIOUS, 5, 5, STATE_READY, {1, 1, 1, 1, 0}, {0,0,0,0,0}, {1, 1, 1, 1, 0}, 0, 0, 0, 0, 0, 0, 0, 0 };
-            Patient p3 = { "P3", "Emma Watson", "Cardiac arrest / Trauma (Critical)", 0, PRIO_CRITICAL, PRIO_CRITICAL, 4, 4, STATE_READY, {1, 1, 1, 2, 1}, {0,0,0,0,0}, {1, 1, 1, 2, 1}, 0, 0, 0, 0, 0, 0, 0, 0 };
+            /* If user asked for more than 10, generate additional patients up to req_count */
+            while (g_sim.patient_count < req_count && g_sim.patient_count < MAX_PATIENTS) {
+                int idx = g_sim.patient_count;
+                Patient extra = g_sim.patients[idx % 8];
+                snprintf(extra.pid, sizeof(extra.pid), "P%d", idx + 1);
+                extra.arrival_time = 0;
+                extra.state = STATE_READY;
+                g_sim.patients[g_sim.patient_count++] = extra;
+            }
 
-            g_sim.patients[g_sim.patient_count++] = p1;
-            g_sim.patients[g_sim.patient_count++] = p2;
-            g_sim.patients[g_sim.patient_count++] = p3;
+            /* Keep exactly req_count patients and put them in READY so user can step immediately */
+            g_sim.patient_count = req_count;
+            for (int i = 0; i < g_sim.patient_count; i++) {
+                g_sim.patients[i].arrival_time = 0;
+                g_sim.patients[i].state = STATE_READY;
+            }
 
             banker_check_safety(&g_sim, &g_sim.banker);
             wfg_build(&g_sim, &g_sim.wfg);
-            ipc_publish(&g_sim, MSG_ARRIVAL, "TriageDesk", "Scheduler", "P1, P2, P3",
-                        "Loaded 3-Patient Demo Workload: P1 (L3 Moderate), P2 (L2 Serious), P3 (L1 Critical). Click Step to run!");
+
+            char details[256];
+            snprintf(details, sizeof(details), "Loaded %d patient(s) into READY queue. Click Step or Play to run, or '+ Register Patient' to add more!", req_count);
+            ipc_publish(&g_sim, MSG_ARRIVAL, "TriageDesk", "Scheduler", "WORKLOAD", details);
 
             char* json_buf = (char*)malloc(BUFFER_SIZE);
             if (json_buf) {
