@@ -902,6 +902,8 @@
                         p.progress_percent = Math.round(((p.burst_time - p.remaining_time) / p.burst_time) * 100);
                         if (p.remaining_time === 0) {
                             p.state = "COMPLETED";
+                            p.completion_time = offlineState.sim_time;
+                            p.turnaround_time = offlineState.sim_time - (p.arrival_time || 0);
                             p.allocated_resources = { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 };
                             offlineState.ipc_messages.push({
                                 timestamp: offlineState.sim_time,
@@ -1262,21 +1264,37 @@
             let readyCount = 0, runCount = 0, waitCount = 0, compCount = 0;
 
             data.patients.forEach(p => {
-                const card = createPatientCard(p);
                 if (p.state === 'READY') {
-                    readyCol.appendChild(card);
+                    readyCol.appendChild(createPatientCard(p));
                     readyCount++;
                 } else if (p.state === 'RUNNING') {
-                    runCol.appendChild(card);
+                    runCol.appendChild(createPatientCard(p));
                     runCount++;
                 } else if (p.state === 'WAITING') {
-                    waitCol.appendChild(card);
+                    waitCol.appendChild(createPatientCard(p));
                     waitCount++;
-                } else if (p.state === 'COMPLETED') {
-                    compCol.appendChild(card);
-                    compCount++;
                 }
             });
+
+            // Sort COMPLETED patients by actual completion time (matches Safe Sequence execution order)
+            const completedPatients = data.patients
+                .filter(p => p.state === 'COMPLETED')
+                .sort((a, b) => {
+                    const tA = (typeof a.completion_time === 'number' && a.completion_time > 0) ? a.completion_time : ((a.arrival_time || 0) + (a.waiting_time || 0) + (a.burst_time || 0));
+                    const tB = (typeof b.completion_time === 'number' && b.completion_time > 0) ? b.completion_time : ((b.arrival_time || 0) + (b.waiting_time || 0) + (b.burst_time || 0));
+                    return tA - tB;
+                });
+
+            completedPatients.forEach((p, idx) => {
+                p._finishRank = idx + 1;
+                compCol.appendChild(createPatientCard(p));
+                compCount++;
+            });
+
+            // Auto-pause clock when all patients have completed treatment
+            if (isPlaying && data.patients.length > 0 && compCount === data.patients.length) {
+                togglePlay();
+            }
 
             document.getElementById('count-ready').textContent = readyCount;
             document.getElementById('count-running').textContent = runCount;
@@ -1297,10 +1315,18 @@
             } else if (data.banker_state.is_safe && !data.wait_for_graph.has_deadlock) {
                 bankerBadge.textContent = 'SAFE STATE';
                 bankerBadge.className = 'badge badge-p4';
-                document.getElementById('safe-sequence-text').textContent = 
-                    data.banker_state.safe_sequence.length > 0 
-                        ? `< ${data.banker_state.safe_sequence.join(' ➔ ')} >` 
-                        : 'All Complete';
+                if (data.banker_state.safe_sequence.length > 0) {
+                    const donePrefix = completedPatients.length > 0
+                        ? completedPatients.map(p => `${p.pid}✓`).join(' ➔ ') + ' ➔ '
+                        : '';
+                    document.getElementById('safe-sequence-text').textContent =
+                        `< ${donePrefix}${data.banker_state.safe_sequence.join(' ➔ ')} >`;
+                } else if (completedPatients.length > 0) {
+                    document.getElementById('safe-sequence-text').textContent =
+                        `< ${completedPatients.map(p => p.pid).join(' ➔ ')} > (All Complete)`;
+                } else {
+                    document.getElementById('safe-sequence-text').textContent = 'All Complete';
+                }
             } else {
                 bankerBadge.textContent = 'UNSAFE STATE';
                 bankerBadge.className = 'badge badge-p1';
@@ -1371,6 +1397,13 @@
                 .map(([res, count]) => `<span class="res-tag">${res.slice(0,3)}:${count}</span>`)
                 .join('');
 
+            const doneTime = (typeof p.completion_time === 'number' && p.completion_time > 0)
+                ? p.completion_time
+                : ((p.arrival_time || 0) + (p.waiting_time || 0) + (p.burst_time || 0));
+            const finishBadge = (p.state === 'COMPLETED' && p._finishRank)
+                ? `<div style="font-size: 0.68rem; color: var(--accent-green); font-weight: 700; margin-top: 2px;">✓ Finished #${p._finishRank} (at T=${doneTime})</div>`
+                : '';
+
             card.innerHTML = `
                 <div class="patient-card-header">
                     <span class="patient-id">${p.pid}</span>
@@ -1379,6 +1412,7 @@
                 <div class="patient-name">${p.name}</div>
                 <div style="font-size: 0.68rem; color: var(--text-muted);">${p.condition_description}</div>
                 ${agingInfo}
+                ${finishBadge}
                 <div class="progress-bar" style="margin-top: 4px;">
                     <div class="progress-fill" style="width: ${p.progress_percent}%;"></div>
                 </div>

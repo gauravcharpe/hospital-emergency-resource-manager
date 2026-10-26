@@ -34,13 +34,13 @@ void herm_export_json_state(HospitalSimulator* sim, char* buffer, size_t max_len
         Patient* p = &sim->patients[i];
         float prog = (p->burst_time > 0) ? ((float)(p->burst_time - p->remaining_time) / p->burst_time) * 100.0f : 100.0f;
         offset += snprintf(buffer + offset, max_len - offset,
-            "{\"pid\": \"%s\", \"name\": \"%s\", \"arrival_time\": %d, \"base_priority\": %d, \"base_priority_name\": \"%s\", \"effective_priority\": %d, \"effective_priority_name\": \"%s\", \"burst_time\": %d, \"remaining_time\": %d, \"progress_percent\": %.1f, \"state\": \"%s\", \"waiting_time\": %d, \"turnaround_time\": %d, \"preemption_count\": %d, \"is_starved\": %s, \"condition_description\": \"%s\", "
+            "{\"pid\": \"%s\", \"name\": \"%s\", \"arrival_time\": %d, \"base_priority\": %d, \"base_priority_name\": \"%s\", \"effective_priority\": %d, \"effective_priority_name\": \"%s\", \"burst_time\": %d, \"remaining_time\": %d, \"progress_percent\": %.1f, \"state\": \"%s\", \"waiting_time\": %d, \"turnaround_time\": %d, \"completion_time\": %d, \"preemption_count\": %d, \"is_starved\": %s, \"condition_description\": \"%s\", "
             "\"allocated_resources\": {\"ICU_Beds\": %d, \"Ventilators\": %d, \"Doctors\": %d, \"Nurses\": %d, \"Operation_Theatres\": %d}, "
             "\"max_resources\": {\"ICU_Beds\": %d, \"Ventilators\": %d, \"Doctors\": %d, \"Nurses\": %d, \"Operation_Theatres\": %d}, "
             "\"need_resources\": {\"ICU_Beds\": %d, \"Ventilators\": %d, \"Doctors\": %d, \"Nurses\": %d, \"Operation_Theatres\": %d}}%s",
             p->pid, p->name, p->arrival_time, p->base_priority, get_priority_name(p->base_priority),
             p->effective_priority, get_priority_name(p->effective_priority), p->burst_time, p->remaining_time,
-            prog, get_state_name(p->state), p->waiting_time, p->turnaround_time, p->preemption_count,
+            prog, get_state_name(p->state), p->waiting_time, p->turnaround_time, p->completion_time, p->preemption_count,
             p->is_starved ? "true" : "false", p->condition,
             p->allocated[0], p->allocated[1], p->allocated[2], p->allocated[3], p->allocated[4],
             p->max_claim[0], p->max_claim[1], p->max_claim[2], p->max_claim[3], p->max_claim[4],
