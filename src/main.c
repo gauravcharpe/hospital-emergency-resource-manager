@@ -72,8 +72,9 @@ int main(int argc, char* argv[]) {
         printf("  2. Run Full Comparative Benchmark Study (FCFS vs Priority vs Preemptive)\n");
         printf("  3. Deadlock Injection & Wait-For Graph Recovery Demo\n");
         printf("  4. High-Contention Surge Workload Test\n");
-        printf("  5. Exit\n");
-        printf("\nEnter choice [1-5]: ");
+        printf("  5. Custom Patient Input (Enter 3 or N Patients Manually)\n");
+        printf("  6. Exit\n");
+        printf("\nEnter choice [1-6]: ");
 
         int choice = 0;
         if (scanf("%d", &choice) != 1) {
@@ -131,6 +132,66 @@ int main(int argc, char* argv[]) {
             herm_destroy(&sim);
 
         } else if (choice == 5) {
+            HospitalSimulator sim;
+            herm_init(&sim, POLICY_PREEMPTIVE_AGING, true);
+            herm_reset(&sim);
+            sim.patient_count = 0;
+
+            int num_p = 3;
+            printf("\nHow many patients do you want to enter? (e.g., 3): ");
+            if (scanf("%d", &num_p) != 1 || num_p < 1) num_p = 3;
+            if (num_p > MAX_PATIENTS) num_p = MAX_PATIENTS;
+
+            for (int i = 0; i < num_p; i++) {
+                Patient p;
+                memset(&p, 0, sizeof(Patient));
+                snprintf(p.pid, sizeof(p.pid), "P%d", i + 1);
+                snprintf(p.condition, sizeof(p.condition), "Custom Emergency Admission");
+                printf("\n--- Enter Details for Patient %s ---\n", p.pid);
+                printf("  Name (single word, e.g., Patient%d): ", i + 1);
+                scanf("%63s", p.name);
+                printf("  Priority [1=Critical, 2=Serious, 3=Moderate, 4=Stable]: ");
+                scanf("%d", &p.base_priority);
+                if (p.base_priority < 1 || p.base_priority > 4) p.base_priority = 1;
+                p.effective_priority = p.base_priority;
+                printf("  Burst Time (ticks, e.g., 5): ");
+                scanf("%d", &p.burst_time);
+                if (p.burst_time < 1) p.burst_time = 5;
+                p.remaining_time = p.burst_time;
+                p.arrival_time = 0;
+                p.state = STATE_NEW;
+
+                printf("  Max Resources Needed [Beds Vents Docs Nurses OTs] (e.g., 1 0 1 1 0): ");
+                scanf("%d %d %d %d %d",
+                      &p.max_claim[0], &p.max_claim[1], &p.max_claim[2],
+                      &p.max_claim[3], &p.max_claim[4]);
+                for (int r = 0; r < NUM_RESOURCES; r++) {
+                    p.allocated[r] = 0;
+                    p.need[r] = p.max_claim[r];
+                }
+                sim.patients[sim.patient_count++] = p;
+            }
+
+            char line[64];
+            fgets(line, sizeof(line), stdin); /* consume leftover newline */
+            printf("\nStarting simulation with your %d custom patients. Press Enter for each tick:\n", num_p);
+            while (!sim.is_completed) {
+                herm_step(&sim);
+                print_state_tui(&sim);
+                if (sim.is_completed) break;
+                printf("\nPress [Enter] for next tick (or 'r' to run to end, 'q' to quit): ");
+                if (!fgets(line, sizeof(line), stdin)) break;
+                if (line[0] == 'q' || line[0] == 'Q') break;
+                if (line[0] == 'r' || line[0] == 'R') {
+                    herm_run_all(&sim, 150);
+                    print_state_tui(&sim);
+                    break;
+                }
+            }
+            printf("\n\033[1;32m✓ All %d custom patients treated and discharged at T=%dt!\033[0m\n", num_p, sim.clock);
+            herm_destroy(&sim);
+
+        } else if (choice == 6) {
             printf("Exiting HERM. Good luck with your Operating Systems review!\n");
             break;
         }

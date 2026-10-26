@@ -250,6 +250,49 @@ static void handle_client(int client_fd) {
                 send_response(client_fd, "application/json", json_buf, 200);
                 free(json_buf);
             }
+        } else if (strcmp(path, "/api/clear_patients") == 0) {
+            herm_reset(&g_sim);
+            g_sim.patient_count = 0;
+            g_sim.clock = 0;
+            g_sim.is_completed = 0;
+            g_sim.message_count = 0;
+            banker_check_safety(&g_sim, &g_sim.banker);
+            wfg_build(&g_sim, &g_sim.wfg);
+            ipc_publish(&g_sim, MSG_ARRIVAL, "System", "TriageDesk", "CUSTOM",
+                        "Cleared default workload. Use '+ Register Patient' to add your custom patients (P1, P2, P3...).");
+
+            char* json_buf = (char*)malloc(BUFFER_SIZE);
+            if (json_buf) {
+                herm_export_json_state(&g_sim, json_buf, BUFFER_SIZE);
+                send_response(client_fd, "application/json", json_buf, 200);
+                free(json_buf);
+            }
+        } else if (strcmp(path, "/api/load_three") == 0) {
+            herm_reset(&g_sim);
+            g_sim.patient_count = 0;
+            g_sim.clock = 0;
+            g_sim.is_completed = 0;
+            g_sim.message_count = 0;
+
+            Patient p1 = { "P1", "John Doe", "Controlled bleeding (Moderate)", 0, PRIO_MODERATE, PRIO_MODERATE, 6, 6, STATE_READY, {1, 0, 1, 1, 0}, {0,0,0,0,0}, {1, 0, 1, 1, 0}, 0, 0, 0, 0, 0, 0, 0, 0 };
+            Patient p2 = { "P2", "Sarah Smith", "Acute respiratory distress (Serious)", 0, PRIO_SERIOUS, PRIO_SERIOUS, 5, 5, STATE_READY, {1, 1, 1, 1, 0}, {0,0,0,0,0}, {1, 1, 1, 1, 0}, 0, 0, 0, 0, 0, 0, 0, 0 };
+            Patient p3 = { "P3", "Emma Watson", "Cardiac arrest / Trauma (Critical)", 0, PRIO_CRITICAL, PRIO_CRITICAL, 4, 4, STATE_READY, {1, 1, 1, 2, 1}, {0,0,0,0,0}, {1, 1, 1, 2, 1}, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+            g_sim.patients[g_sim.patient_count++] = p1;
+            g_sim.patients[g_sim.patient_count++] = p2;
+            g_sim.patients[g_sim.patient_count++] = p3;
+
+            banker_check_safety(&g_sim, &g_sim.banker);
+            wfg_build(&g_sim, &g_sim.wfg);
+            ipc_publish(&g_sim, MSG_ARRIVAL, "TriageDesk", "Scheduler", "P1, P2, P3",
+                        "Loaded 3-Patient Demo Workload: P1 (L3 Moderate), P2 (L2 Serious), P3 (L1 Critical). Click Step to run!");
+
+            char* json_buf = (char*)malloc(BUFFER_SIZE);
+            if (json_buf) {
+                herm_export_json_state(&g_sim, json_buf, BUFFER_SIZE);
+                send_response(client_fd, "application/json", json_buf, 200);
+                free(json_buf);
+            }
         } else if (strcmp(path, "/api/load_surge") == 0) {
             herm_load_surge_workload(&g_sim);
             herm_reset(&g_sim);

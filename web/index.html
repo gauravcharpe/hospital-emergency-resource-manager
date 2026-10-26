@@ -609,9 +609,11 @@
             <div class="panel-box">
                 <div class="panel-header">
                     <h2>🏥 Clinical Triage & OS Process State Machine</h2>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-secondary" id="btn-open-patient-modal" style="font-size: 0.72rem; padding: 4px 10px;">+ Register Patient</button>
-                        <button class="btn btn-secondary" id="btn-load-surge" style="font-size: 0.72rem; padding: 4px 10px;">Load Surge Workload</button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" id="btn-open-patient-modal" style="font-size: 0.72rem; padding: 4px 10px;">+ Register Patient</button>
+                        <button class="btn btn-emerald" id="btn-load-three" style="font-size: 0.72rem; padding: 4px 10px;">Load 3 Patients</button>
+                        <button class="btn btn-secondary" id="btn-clear-patients" style="font-size: 0.72rem; padding: 4px 10px;">Clear All (0)</button>
+                        <button class="btn btn-secondary" id="btn-load-surge" style="font-size: 0.72rem; padding: 4px 10px;">Load 8 Patients</button>
                     </div>
                 </div>
                 <div class="panel-body">
@@ -1085,6 +1087,70 @@
             }
         }
 
+        async function loadThreePatients() {
+            document.getElementById('inp-pid').value = 'P4';
+            try {
+                const res = await fetch('/api/load_three', { method: 'POST' });
+                if (!res.ok) throw new Error("HTTP error");
+                const data = await res.json();
+                renderState(data);
+            } catch (err) {
+                offlineState.sim_time = 0;
+                offlineState.wait_for_graph.has_deadlock = false;
+                offlineState.wait_for_graph.detected_cycles = [];
+                offlineState.wait_for_graph.nodes = ["P1", "P2", "P3"];
+                offlineState.wait_for_graph.edges = [];
+                offlineState.resources = {
+                    ICU_Beds: { total: 4, available: 4, allocated: 0, utilization_percent: 0.0 },
+                    Ventilators: { total: 3, available: 3, allocated: 0, utilization_percent: 0.0 },
+                    Doctors: { total: 5, available: 5, allocated: 0, utilization_percent: 0.0 },
+                    Nurses: { total: 8, available: 8, allocated: 0, utilization_percent: 0.0 },
+                    Operation_Theatres: { total: 2, available: 2, allocated: 0, utilization_percent: 0.0 }
+                };
+                offlineState.patients = [
+                    { pid: "P1", name: "John Doe", arrival_time: 0, base_priority: 3, base_priority_name: "Moderate", effective_priority: 3, effective_priority_name: "Moderate", burst_time: 6, remaining_time: 6, progress_percent: 0.0, state: "READY", waiting_time: 0, turnaround_time: 0, preemption_count: 0, is_starved: false, condition_description: "Controlled bleeding (Moderate)", allocated_resources: { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 }, max_resources: { ICU_Beds: 1, Ventilators: 0, Doctors: 1, Nurses: 1, Operation_Theatres: 0 }, need_resources: { ICU_Beds: 1, Ventilators: 0, Doctors: 1, Nurses: 1, Operation_Theatres: 0 } },
+                    { pid: "P2", name: "Sarah Smith", arrival_time: 0, base_priority: 2, base_priority_name: "Serious", effective_priority: 2, effective_priority_name: "Serious", burst_time: 5, remaining_time: 5, progress_percent: 0.0, state: "READY", waiting_time: 0, turnaround_time: 0, preemption_count: 0, is_starved: false, condition_description: "Acute respiratory distress (Serious)", allocated_resources: { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 }, max_resources: { ICU_Beds: 1, Ventilators: 1, Doctors: 1, Nurses: 1, Operation_Theatres: 0 }, need_resources: { ICU_Beds: 1, Ventilators: 1, Doctors: 1, Nurses: 1, Operation_Theatres: 0 } },
+                    { pid: "P3", name: "Emma Watson", arrival_time: 0, base_priority: 1, base_priority_name: "Critical", effective_priority: 1, effective_priority_name: "Critical", burst_time: 4, remaining_time: 4, progress_percent: 0.0, state: "READY", waiting_time: 0, turnaround_time: 0, preemption_count: 0, is_starved: false, condition_description: "Cardiac arrest / Trauma (Critical)", allocated_resources: { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 }, max_resources: { ICU_Beds: 1, Ventilators: 1, Doctors: 1, Nurses: 2, Operation_Theatres: 1 }, need_resources: { ICU_Beds: 1, Ventilators: 1, Doctors: 1, Nurses: 2, Operation_Theatres: 1 } }
+                ];
+                offlineState.banker_state.is_safe = true;
+                offlineState.banker_state.safe_sequence = ["P3", "P2", "P1"];
+                offlineState.ipc_messages = [
+                    { timestamp: 0, msg_type: "ARRIVAL", patient_id: "P1, P2, P3", payload: { details: "Loaded 3-Patient Demo Workload: P1 (L3), P2 (L2), P3 (L1 Critical). Click Step to run!" } }
+                ];
+                renderState(offlineState);
+            }
+        }
+
+        async function clearAllPatients() {
+            document.getElementById('inp-pid').value = 'P1';
+            try {
+                const res = await fetch('/api/clear_patients', { method: 'POST' });
+                if (!res.ok) throw new Error("HTTP error");
+                const data = await res.json();
+                renderState(data);
+            } catch (err) {
+                offlineState.sim_time = 0;
+                offlineState.patients = [];
+                offlineState.wait_for_graph.has_deadlock = false;
+                offlineState.wait_for_graph.detected_cycles = [];
+                offlineState.wait_for_graph.nodes = [];
+                offlineState.wait_for_graph.edges = [];
+                offlineState.banker_state.is_safe = true;
+                offlineState.banker_state.safe_sequence = [];
+                offlineState.resources = {
+                    ICU_Beds: { total: 4, available: 4, allocated: 0, utilization_percent: 0.0 },
+                    Ventilators: { total: 3, available: 3, allocated: 0, utilization_percent: 0.0 },
+                    Doctors: { total: 5, available: 5, allocated: 0, utilization_percent: 0.0 },
+                    Nurses: { total: 8, available: 8, allocated: 0, utilization_percent: 0.0 },
+                    Operation_Theatres: { total: 2, available: 2, allocated: 0, utilization_percent: 0.0 }
+                };
+                offlineState.ipc_messages = [
+                    { timestamp: 0, msg_type: "ARRIVAL", patient_id: "CUSTOM", payload: { details: "Cleared all patients. Click '+ Register Patient' to add P1, P2, P3 individually!" } }
+                ];
+                renderState(offlineState);
+            }
+        }
+
         async function loadSurge() {
             try {
                 await fetch('/api/load_surge', { method: 'POST' });
@@ -1427,6 +1493,8 @@
         document.getElementById('btn-step').addEventListener('click', stepSimulation);
         document.getElementById('btn-reset').addEventListener('click', resetSimulation);
         document.getElementById('btn-deadlock-test').addEventListener('click', triggerDeadlock);
+        document.getElementById('btn-load-three').addEventListener('click', loadThreePatients);
+        document.getElementById('btn-clear-patients').addEventListener('click', clearAllPatients);
         document.getElementById('btn-load-surge').addEventListener('click', loadSurge);
         document.getElementById('btn-benchmark').addEventListener('click', runBenchmark);
         document.getElementById('policy-select').addEventListener('change', resetSimulation);
