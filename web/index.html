@@ -855,17 +855,96 @@
                 const data = await res.json();
                 renderState(data);
             } catch (err) {
-                // Local tick step
+                // Local tick step for standalone / GitHub preview mode
                 offlineState.sim_time++;
+
+                // 1. If a deadlock cycle is currently active, recover by preempting lowest-priority victim
+                if (offlineState.wait_for_graph.has_deadlock) {
+                    const victim = offlineState.patients.find(p => p.pid === "P_DEAD_B") ||
+                                   offlineState.patients.find(p => p.state === "WAITING");
+                    if (victim) {
+                        victim.state = "READY";
+                        victim.condition_description = "Preempted by WFG Recovery (Cycle Broken)";
+                        victim.allocated_resources = { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 };
+                        victim.need_resources = { ...victim.max_resources };
+                    }
+                    const partner = offlineState.patients.find(p => p.pid === "P_DEAD_A");
+                    if (partner) {
+                        partner.state = "RUNNING";
+                        partner.condition_description = "Running (Acquired Bed after WFG Recovery)";
+                        partner.allocated_resources = { ...partner.max_resources };
+                        partner.need_resources = { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 };
+                    }
+                    offlineState.wait_for_graph.has_deadlock = false;
+                    offlineState.wait_for_graph.detected_cycles = [];
+                    offlineState.wait_for_graph.edges = offlineState.wait_for_graph.edges.filter(
+                        e => !(e.from === "P_DEAD_A" || e.from === "P_DEAD_B")
+                    );
+                    offlineState.banker_state.is_safe = true;
+                    offlineState.ipc_messages.push({
+                        timestamp: offlineState.sim_time,
+                        msg_type: "DEADLOCK_RECOVERED",
+                        patient_id: victim ? victim.pid : "P_DEAD_B",
+                        payload: { details: "Circular wait resolved! Preempted lowest-urgency victim to break cycle." }
+                    });
+                }
+
+                // 2. Progress running tasks & age ready tasks
                 offlineState.patients.forEach(p => {
                     if (p.state === "RUNNING") {
                         p.remaining_time = Math.max(0, p.remaining_time - 1);
                         p.progress_percent = Math.round(((p.burst_time - p.remaining_time) / p.burst_time) * 100);
-                        if (p.remaining_time === 0) p.state = "COMPLETED";
+                        if (p.remaining_time === 0) {
+                            p.state = "COMPLETED";
+                            p.allocated_resources = { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 };
+                            offlineState.ipc_messages.push({
+                                timestamp: offlineState.sim_time,
+                                msg_type: "DONE",
+                                patient_id: p.pid,
+                                payload: { details: `Discharged ${p.name}! Treatment completed.` }
+                            });
+                        }
                     } else if (p.state === "READY" || p.state === "WAITING") {
                         p.waiting_time++;
+                        if (p.state === "READY" && p.base_priority > 2 && p.waiting_time % 4 === 0 && p.effective_priority > 2) {
+                            p.effective_priority--;
+                            p.effective_priority_name = p.effective_priority === 2 ? "Serious" : "Moderate";
+                            offlineState.ipc_messages.push({
+                                timestamp: offlineState.sim_time,
+                                msg_type: "AGING",
+                                patient_id: p.pid,
+                                payload: { details: `Dynamic Aging promoted ${p.pid} to Level ${p.effective_priority} (${p.effective_priority_name}).` }
+                            });
+                        }
                     }
                 });
+
+                // 3. Dispatch highest priority READY/WAITING patient if fewer than 3 RUNNING
+                const runningCount = offlineState.patients.filter(p => p.state === "RUNNING").length;
+                if (runningCount < 3) {
+                    const candidates = offlineState.patients
+                        .filter(p => p.state === "READY" || p.state === "WAITING")
+                        .sort((a, b) => a.effective_priority - b.effective_priority);
+                    if (candidates.length > 0) {
+                        const nextP = candidates[0];
+                        nextP.state = "RUNNING";
+                        nextP.allocated_resources = { ...nextP.max_resources };
+                        nextP.need_resources = { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 };
+                        offlineState.ipc_messages.push({
+                            timestamp: offlineState.sim_time,
+                            msg_type: "GRANT",
+                            patient_id: nextP.pid,
+                            payload: { details: `Resources granted to ${nextP.pid} (${nextP.name}); moved to RUNNING.` }
+                        });
+                    }
+                }
+
+                // Recompute safe sequence from active patients
+                offlineState.banker_state.safe_sequence = offlineState.patients
+                    .filter(p => p.state !== "COMPLETED")
+                    .sort((a, b) => a.effective_priority - b.effective_priority)
+                    .map(p => p.pid);
+
                 renderState(offlineState);
             }
         }
@@ -889,35 +968,118 @@
             }
         }
 
-        async function resetSimulation() {
+        async function toggleBanker() {
+            const banker = document.getElementById('banker-toggle').checked;
             try {
-                const policy = document.getElementById('policy-select').value;
-                const banker = document.getElementById('banker-toggle').checked;
-                await fetch('/api/reset', {
+                const res = await fetch('/api/toggle_banker', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ banker_enabled: banker })
+                });
+                if (!res.ok) throw new Error("HTTP error");
+                const data = await res.json();
+                renderState(data);
+            } catch (err) {
+                offlineState.banker_enabled = banker;
+                offlineState.ipc_messages.push({
+                    timestamp: offlineState.sim_time,
+                    msg_type: banker ? "GRANT" : "DENY",
+                    patient_id: banker ? "SAFE_MODE" : "UNSAFE_MODE",
+                    payload: {
+                        details: banker
+                            ? "Dijkstra's Banker's Avoidance ENABLED: Proactive Safe Sequence check active."
+                            : "Dijkstra's Banker's Avoidance DISABLED: Unchecked allocation mode (WFG Cycle Detector active)."
+                    }
+                });
+                renderState(offlineState);
+            }
+        }
+
+        async function resetSimulation() {
+            const policy = document.getElementById('policy-select').value;
+            const banker = document.getElementById('banker-toggle').checked;
+            try {
+                const res = await fetch('/api/reset', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ policy, banker_enabled: banker })
                 });
-                await fetchStatus();
+                if (!res.ok) throw new Error("HTTP error");
+                const data = await res.json();
+                renderState(data);
             } catch (err) {
                 offlineState.sim_time = 0;
+                offlineState.policy = policy;
+                offlineState.banker_enabled = banker;
+                offlineState.wait_for_graph.has_deadlock = false;
+                offlineState.wait_for_graph.detected_cycles = [];
+                offlineState.wait_for_graph.edges = [{ from: "P2", to: "P1" }, { from: "P5", to: "P4" }];
+                offlineState.patients = offlineState.patients.filter(p => !p.pid.startsWith("P_DEAD"));
+                offlineState.banker_state.is_safe = true;
+                offlineState.ipc_messages.push({
+                    timestamp: 0,
+                    msg_type: "ARRIVAL",
+                    patient_id: "SYSTEM",
+                    payload: { details: `Simulation reset with policy ${policy} (Banker's: ${banker ? 'ON' : 'OFF'}).` }
+                });
                 renderState(offlineState);
             }
         }
 
         async function triggerDeadlock() {
+            document.getElementById('banker-toggle').checked = false;
             try {
-                await fetch('/api/trigger_deadlock', { method: 'POST' });
-                await fetchStatus();
+                const res = await fetch('/api/trigger_deadlock', { method: 'POST' });
+                if (!res.ok) throw new Error("HTTP error");
+                const data = await res.json();
+                renderState(data);
             } catch (err) {
+                offlineState.banker_enabled = false;
+                offlineState.banker_state.is_safe = false;
+                offlineState.banker_state.safe_sequence = [];
+                offlineState.resources.ICU_Beds.available = 0;
+                offlineState.resources.ICU_Beds.allocated = 4;
+                offlineState.resources.ICU_Beds.utilization_percent = 100.0;
+                offlineState.resources.Operation_Theatres.available = 0;
+                offlineState.resources.Operation_Theatres.allocated = 2;
+                offlineState.resources.Operation_Theatres.utilization_percent = 100.0;
+
+                offlineState.patients = offlineState.patients.filter(p => p.pid !== "P_DEAD_A" && p.pid !== "P_DEAD_B");
+                offlineState.patients.push(
+                    {
+                        pid: "P_DEAD_A", name: "Emergency Cardiac", arrival_time: offlineState.sim_time,
+                        base_priority: 2, base_priority_name: "Serious", effective_priority: 2, effective_priority_name: "Serious",
+                        burst_time: 8, remaining_time: 8, progress_percent: 0, state: "WAITING", waiting_time: 1, turnaround_time: 0,
+                        preemption_count: 0, is_starved: false, condition_description: "Holding OT, waiting for ICU Bed",
+                        allocated_resources: { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 1 },
+                        max_resources: { ICU_Beds: 1, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 1 },
+                        need_resources: { ICU_Beds: 1, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 }
+                    },
+                    {
+                        pid: "P_DEAD_B", name: "Severe Polytrauma", arrival_time: offlineState.sim_time,
+                        base_priority: 3, base_priority_name: "Moderate", effective_priority: 3, effective_priority_name: "Moderate",
+                        burst_time: 8, remaining_time: 8, progress_percent: 0, state: "WAITING", waiting_time: 1, turnaround_time: 0,
+                        preemption_count: 0, is_starved: false, condition_description: "Holding ICU Bed, waiting for OT",
+                        allocated_resources: { ICU_Beds: 1, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 },
+                        max_resources: { ICU_Beds: 1, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 1 },
+                        need_resources: { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 1 }
+                    }
+                );
+
+                if (!offlineState.wait_for_graph.nodes.includes("P_DEAD_A")) {
+                    offlineState.wait_for_graph.nodes.push("P_DEAD_A", "P_DEAD_B");
+                }
                 offlineState.wait_for_graph.has_deadlock = true;
-                offlineState.wait_for_graph.detected_cycles = [["P1", "P2", "P1"]];
-                offlineState.wait_for_graph.edges.push({ from: "P1", to: "P2" });
+                offlineState.wait_for_graph.detected_cycles = [["P_DEAD_A", "P_DEAD_B", "P_DEAD_A"]];
+                offlineState.wait_for_graph.edges.push(
+                    { from: "P_DEAD_A", to: "P_DEAD_B" },
+                    { from: "P_DEAD_B", to: "P_DEAD_A" }
+                );
                 offlineState.ipc_messages.push({
                     timestamp: offlineState.sim_time,
                     msg_type: "DEADLOCK_DETECTED",
-                    patient_id: "P1 <-> P2",
-                    payload: { details: "Circular wait detected! Preempting victim." }
+                    patient_id: "P_DEAD_A <-> P_DEAD_B",
+                    payload: { details: "Circular wait injected (Banker's OFF): P_DEAD_A holds OT waiting for Bed; P_DEAD_B holds Bed waiting for OT. Click Step to recover!" }
                 });
                 renderState(offlineState);
             }
@@ -1019,9 +1181,18 @@
             document.getElementById('count-waiting').textContent = waitCount;
             document.getElementById('count-completed').textContent = compCount;
 
+            // Sync Banker's toggle switch with simulation state
+            if (typeof data.banker_enabled !== 'undefined') {
+                document.getElementById('banker-toggle').checked = Boolean(data.banker_enabled);
+            }
+
             // Render Banker's Algorithm Safe State
             const bankerBadge = document.getElementById('banker-status-badge');
-            if (data.banker_state.is_safe) {
+            if (!data.banker_enabled && !data.wait_for_graph.has_deadlock) {
+                bankerBadge.textContent = 'AVOIDANCE OFF (WFG ACTIVE)';
+                bankerBadge.className = 'badge badge-p2';
+                document.getElementById('safe-sequence-text').textContent = 'Banker check bypassed (Reactive WFG Mode)';
+            } else if (data.banker_state.is_safe && !data.wait_for_graph.has_deadlock) {
                 bankerBadge.textContent = 'SAFE STATE';
                 bankerBadge.className = 'badge badge-p4';
                 document.getElementById('safe-sequence-text').textContent = 
@@ -1031,7 +1202,7 @@
             } else {
                 bankerBadge.textContent = 'UNSAFE STATE';
                 bankerBadge.className = 'badge badge-p1';
-                document.getElementById('safe-sequence-text').textContent = 'No safe sequence found!';
+                document.getElementById('safe-sequence-text').textContent = 'No safe sequence found! (Circular Wait)';
             }
 
             // Render Banker Matrix Table
@@ -1259,30 +1430,98 @@
         document.getElementById('btn-load-surge').addEventListener('click', loadSurge);
         document.getElementById('btn-benchmark').addEventListener('click', runBenchmark);
         document.getElementById('policy-select').addEventListener('change', resetSimulation);
-        document.getElementById('banker-toggle').addEventListener('change', resetSimulation);
+        document.getElementById('banker-toggle').addEventListener('change', toggleBanker);
         document.getElementById('btn-open-patient-modal').addEventListener('click', () => openModal('modal-patient'));
 
         document.getElementById('btn-submit-patient').addEventListener('click', async () => {
-            const patientData = {
-                pid: document.getElementById('inp-pid').value,
-                name: document.getElementById('inp-name').value,
-                base_priority: parseInt(document.getElementById('inp-priority').value),
-                burst_time: parseInt(document.getElementById('inp-burst').value),
-                max_resources: {
-                    ICU_Beds: parseInt(document.getElementById('inp-res-beds').value),
-                    Ventilators: parseInt(document.getElementById('inp-res-vents').value),
-                    Doctors: parseInt(document.getElementById('inp-res-docs').value),
-                    Nurses: parseInt(document.getElementById('inp-res-nurses').value),
-                    Operation_Theatres: parseInt(document.getElementById('inp-res-ots').value)
-                }
+            const pidVal = document.getElementById('inp-pid').value.trim() || 'P9';
+            const nameVal = document.getElementById('inp-name').value.trim() || 'Emergency Patient';
+            const prioVal = parseInt(document.getElementById('inp-priority').value) || 1;
+            const burstVal = parseInt(document.getElementById('inp-burst').value) || 6;
+            const maxRes = {
+                ICU_Beds: parseInt(document.getElementById('inp-res-beds').value) || 0,
+                Ventilators: parseInt(document.getElementById('inp-res-vents').value) || 0,
+                Doctors: parseInt(document.getElementById('inp-res-docs').value) || 0,
+                Nurses: parseInt(document.getElementById('inp-res-nurses').value) || 0,
+                Operation_Theatres: parseInt(document.getElementById('inp-res-ots').value) || 0
             };
-            await fetch('/api/add_patient', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(patientData)
-            });
+
+            const patientData = {
+                pid: pidVal,
+                name: nameVal,
+                base_priority: prioVal,
+                burst_time: burstVal,
+                ICU_Beds: maxRes.ICU_Beds,
+                Ventilators: maxRes.Ventilators,
+                Doctors: maxRes.Doctors,
+                Nurses: maxRes.Nurses,
+                Operation_Theatres: maxRes.Operation_Theatres,
+                max_resources: maxRes
+            };
+
+            // Auto-increment default PID for next registration (e.g., P9 -> P10)
+            const matchNum = pidVal.match(/^P(\d+)$/i);
+            if (matchNum) {
+                document.getElementById('inp-pid').value = 'P' + (parseInt(matchNum[1]) + 1);
+            }
+
             closeModal('modal-patient');
-            await fetchStatus();
+
+            try {
+                const res = await fetch('/api/add_patient', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patientData)
+                });
+                if (!res.ok) throw new Error("HTTP error");
+                const data = await res.json();
+                renderState(data);
+            } catch (err) {
+                // Standalone / GitHub preview mode fallback
+                const prioNames = { 1: "Critical", 2: "Serious", 3: "Moderate", 4: "Stable" };
+                const condNames = {
+                    1: "Emergency Trauma / Cardiac (Admitted)",
+                    2: "Acute Respiratory / Serious (Admitted)",
+                    3: "Moderate Care Observation (Admitted)",
+                    4: "Routine Checkup / Stable (Admitted)"
+                };
+                const newPatient = {
+                    pid: pidVal,
+                    name: nameVal,
+                    arrival_time: offlineState.sim_time,
+                    base_priority: prioVal,
+                    base_priority_name: prioNames[prioVal] || "Critical",
+                    effective_priority: prioVal,
+                    effective_priority_name: prioNames[prioVal] || "Critical",
+                    burst_time: burstVal,
+                    remaining_time: burstVal,
+                    progress_percent: 0.0,
+                    state: "READY",
+                    waiting_time: 0,
+                    turnaround_time: 0,
+                    preemption_count: 0,
+                    is_starved: false,
+                    condition_description: condNames[prioVal] || "Emergency Admission",
+                    allocated_resources: { ICU_Beds: 0, Ventilators: 0, Doctors: 0, Nurses: 0, Operation_Theatres: 0 },
+                    max_resources: { ...maxRes },
+                    need_resources: { ...maxRes }
+                };
+                offlineState.patients.push(newPatient);
+                if (!offlineState.wait_for_graph.nodes.includes(pidVal)) {
+                    offlineState.wait_for_graph.nodes.push(pidVal);
+                }
+                offlineState.banker_state.safe_sequence = offlineState.patients
+                    .filter(p => p.state !== "COMPLETED")
+                    .sort((a, b) => a.effective_priority - b.effective_priority)
+                    .map(p => p.pid);
+                offlineState.ipc_messages.push({
+                    timestamp: offlineState.sim_time,
+                    msg_type: "ARRIVAL",
+                    patient_id: pidVal,
+                    payload: { details: `Registered & admitted ${pidVal} (${nameVal}) as Level ${prioVal} (${prioNames[prioVal]}).` }
+                });
+                renderState(offlineState);
+            }
         });
 
         // Initial Load

@@ -88,18 +88,40 @@ void herm_add_patient(HospitalSimulator* sim, Patient p) {
 
 void herm_trigger_deadlock(HospitalSimulator* sim) {
     sim->banker_enabled = 0;
+    sim->is_completed = 0;
 
-    Patient p_a = { "P_DEAD_A", "Emergency Cardiac", "Severe cardiac block", sim->clock, PRIO_SERIOUS, PRIO_SERIOUS, 8, 8, STATE_WAITING, {1, 0, 0, 0, 1}, {0, 0, 0, 0, 1}, {1, 0, 0, 0, 0}, 0, 0, 0, 0, 0, 0, 0, 0 };
-    Patient p_b = { "P_DEAD_B", "Severe Polytrauma", "Internal hemorrhage", sim->clock, PRIO_MODERATE, PRIO_MODERATE, 8, 8, STATE_WAITING, {1, 0, 0, 0, 1}, {1, 0, 0, 0, 0}, {0, 0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0 };
+    /* Remove any previous P_DEAD_A / P_DEAD_B if clicked multiple times */
+    int write_idx = 0;
+    for (int i = 0; i < sim->patient_count; i++) {
+        if (strcmp(sim->patients[i].pid, "P_DEAD_A") != 0 &&
+            strcmp(sim->patients[i].pid, "P_DEAD_B") != 0) {
+            sim->patients[write_idx++] = sim->patients[i];
+        }
+    }
+    sim->patient_count = write_idx;
 
-    herm_add_patient(sim, p_a);
-    herm_add_patient(sim, p_b);
+    /* P_DEAD_A holds 1 OT and needs 1 ICU Bed; P_DEAD_B holds 1 ICU Bed and needs 1 OT */
+    Patient p_a = { "P_DEAD_A", "Emergency Cardiac", "Holding OT, waiting for ICU Bed", sim->clock, PRIO_SERIOUS, PRIO_SERIOUS, 8, 8, STATE_WAITING, {1, 0, 0, 0, 1}, {0, 0, 0, 0, 1}, {1, 0, 0, 0, 0}, 1, 0, 0, 0, 0, 0, 0, 0 };
+    Patient p_b = { "P_DEAD_B", "Severe Polytrauma", "Holding ICU Bed, waiting for OT", sim->clock, PRIO_MODERATE, PRIO_MODERATE, 8, 8, STATE_WAITING, {1, 0, 0, 0, 1}, {1, 0, 0, 0, 0}, {0, 0, 0, 0, 1}, 1, 0, 0, 0, 0, 0, 0, 0 };
 
-    /* Deplete remaining free units to force circular wait */
+    if (sim->patient_count < MAX_PATIENTS - 1) {
+        sim->patients[sim->patient_count++] = p_a;
+        sim->patients[sim->patient_count++] = p_b;
+    }
+
+    /* Deplete remaining free units of Beds and OTs to force circular wait */
     sem_custom_reset(&sim->semaphores[RES_BEDS], 0);
     sem_custom_reset(&sim->semaphores[RES_OTS], 0);
 
-    ipc_publish(sim, MSG_REQUEST, "Tester", "ResourceManager", "P_DEAD_A & P_DEAD_B", "Cross-allocation circular wait injected with Banker's Avoidance OFF.");
+    /* Immediately build WFG and detect cycle so UI shows red cycle before next Step */
+    wfg_build(sim, &sim->wfg);
+    wfg_detect_cycle(&sim->wfg);
+    banker_check_safety(sim, &sim->banker);
+    sim->banker.is_safe = 0;
+    sim->banker.safe_seq_len = 0;
+
+    ipc_publish(sim, MSG_DEADLOCK_DETECTED, "DeadlockDetector", "WaitForGraph", "P_DEAD_A <-> P_DEAD_B",
+                "Circular wait injected (Banker's OFF): P_DEAD_A holds OT waiting for Bed; P_DEAD_B holds Bed waiting for OT. Click Step to recover!");
 }
 
 void herm_step(HospitalSimulator* sim) {
@@ -287,8 +309,10 @@ void herm_step(HospitalSimulator* sim) {
         sim->is_completed = 1;
     }
 
-    /* Update Banker safety check cache */
+    /* Update Banker safety check & WFG cache */
     banker_check_safety(sim, &sim->banker);
+    wfg_build(sim, &sim->wfg);
+    wfg_detect_cycle(&sim->wfg);
 }
 
 void herm_run_all(HospitalSimulator* sim, int max_ticks) {
